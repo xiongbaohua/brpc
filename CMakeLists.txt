@@ -34,10 +34,19 @@ option(BUILD_UNIT_TESTS "Whether to build unit tests" OFF)
 option(BUILD_FUZZ_TESTS "Whether to build fuzz tests" OFF)
 option(BUILD_BRPC_TOOLS "Whether to build brpc tools" ON)
 option(DOWNLOAD_GTEST "Download and build a fresh copy of googletest. Requires Internet access." ON)
+option(PROTOBUF_STATIC "Using protobuf static library" OFF)
 
 # Enable MACOSX_RPATH. Run "cmake --help-policy CMP0042" for policy details.
 if(POLICY CMP0042)
     cmake_policy(SET CMP0042 NEW)
+endif()
+
+if(POLICY CMP0074)
+    cmake_policy(SET CMP0074 NEW)
+endif()
+
+if(POLICY CMP0144)
+    cmake_policy(SET CMP0144 NEW)
 endif()
 
 set(BRPC_VERSION 1.13.0)
@@ -174,7 +183,14 @@ if(CMAKE_CXX_COMPILER_ID STREQUAL "GNU")
     endif()
 endif()
 
-find_package(Protobuf REQUIRED)
+if(PROTOBUF_STATIC)
+    find_package(Protobuf REQUIRED STATIC)
+    find_package(utf8_range REQUIRED STATIC)
+    set(protobuf_UTF8_RANGE_TARGET utf8_range)
+else()
+    find_package(Protobuf REQUIRED)
+endif()
+
 if(Protobuf_VERSION GREATER 4.21)
     # required by absl
     set(CMAKE_CXX_STANDARD 17)
@@ -221,8 +237,8 @@ else()
 endif()
 find_package(Threads REQUIRED)
 
-find_path(LEVELDB_INCLUDE_PATH NAMES leveldb/db.h)
-find_library(LEVELDB_LIB NAMES leveldb)
+find_path(LEVELDB_INCLUDE_PATH NAMES leveldb/db.h PATHS ${LEVELDB_ROOT}/include NO_DEFAULT_PATH)
+find_library(LEVELDB_LIB NAMES leveldb PATHS ${LEVELDB_ROOT}/lib64 NO_DEFAULT_PATH)
 if ((NOT LEVELDB_INCLUDE_PATH) OR (NOT LEVELDB_LIB))
     message(FATAL_ERROR "Fail to find leveldb")
 endif()
@@ -292,7 +308,7 @@ include_directories(
 
 set(DYNAMIC_LIB
     ${GFLAGS_LIBRARY}
-    ${PROTOBUF_LIBRARIES} ${protobuf_ABSL_USED_TARGETS}
+    ${PROTOBUF_LIBRARIES} ${protobuf_ABSL_USED_TARGETS} ${protobuf_UTF8_RANGE_TARGET}
     ${LEVELDB_LIB}
     ${PROTOC_LIB}
     ${CMAKE_THREAD_LIBS_INIT}
@@ -304,12 +320,12 @@ if(WITH_BORINGSSL)
     list(APPEND DYNAMIC_LIB ${BORINGSSL_SSL_LIBRARY})
     list(APPEND DYNAMIC_LIB ${BORINGSSL_CRYPTO_LIBRARY})
 else()
-    list(APPEND DYNAMIC_LIB ${OPENSSL_CRYPTO_LIBRARY})
     if(WITH_MESALINK)
         list(APPEND DYNAMIC_LIB ${MESALINK_LIB})
     else()
         list(APPEND DYNAMIC_LIB ${OPENSSL_SSL_LIBRARY})
     endif()
+    list(APPEND DYNAMIC_LIB ${OPENSSL_CRYPTO_LIBRARY})
 endif()
 
 if(WITH_RDMA)
