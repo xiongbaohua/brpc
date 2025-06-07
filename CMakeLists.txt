@@ -185,10 +185,18 @@ endif()
 
 if(PROTOBUF_STATIC)
     find_package(Protobuf REQUIRED STATIC)
-    find_package(utf8_range REQUIRED STATIC)
-    set(protobuf_UTF8_RANGE_TARGET utf8_range)
+    find_path(UTF8_INCLUDE_PATH NAMES utf8_range.h PATHS ${Protobuf_ROOT}/include NO_DEFAULT_PATH)
+    find_library(UTF8RANGE_LIB NAMES utf8_range PATHS ${Protobuf_ROOT}/lib ${Protobuf_ROOT}/lib64 NO_DEFAULT_PATH)
+    find_library(UTF8VALIDITY_LIB NAMES utf8_validity PATHS ${Protobuf_ROOT}/lib ${Protobuf_ROOT}/lib64 NO_DEFAULT_PATH)
+    if ((NOT UTF8_INCLUDE_PATH) OR (NOT UTF8RANGE_LIB) OR (NOT UTF8VALIDITY_LIB))
+        message(FATAL_ERROR "Fail to find utf8_range and utf8_validity")
+    else()
+        message(STATUS "Found utf8_range: ${UTF8RANGE_LIB}")
+        message(STATUS "Found utf8_validity: ${UTF8VALIDITY_LIB}")
+    endif()
+    set(protobuf_UTF8_TARGET ${UTF8RANGE_LIB} ${UTF8VALIDITY_LIB})
 else()
-    find_package(Protobuf REQUIRED)
+    find_package(Protobuf REQUIRED SHARED)
 endif()
 
 if(Protobuf_VERSION GREATER 4.21)
@@ -238,9 +246,11 @@ endif()
 find_package(Threads REQUIRED)
 
 find_path(LEVELDB_INCLUDE_PATH NAMES leveldb/db.h PATHS ${LEVELDB_ROOT}/include NO_DEFAULT_PATH)
-find_library(LEVELDB_LIB NAMES leveldb PATHS ${LEVELDB_ROOT}/lib64 NO_DEFAULT_PATH)
+find_library(LEVELDB_LIB NAMES leveldb PATHS ${LEVELDB_ROOT}/lib64 ${LEVELDB_ROOT}/lib NO_DEFAULT_PATH)
 if ((NOT LEVELDB_INCLUDE_PATH) OR (NOT LEVELDB_LIB))
     message(FATAL_ERROR "Fail to find leveldb")
+else()
+    message(STATUS "Found leveldb: ${LEVELDB_LIB}")
 endif()
 
 if(WITH_SNAPPY)
@@ -308,7 +318,7 @@ include_directories(
 
 set(DYNAMIC_LIB
     ${GFLAGS_LIBRARY}
-    ${PROTOBUF_LIBRARIES} ${protobuf_ABSL_USED_TARGETS} ${protobuf_UTF8_RANGE_TARGET}
+    ${PROTOBUF_LIBRARIES} ${protobuf_ABSL_USED_TARGETS} ${protobuf_UTF8_TARGET}
     ${LEVELDB_LIB}
     ${PROTOC_LIB}
     ${CMAKE_THREAD_LIBS_INIT}
