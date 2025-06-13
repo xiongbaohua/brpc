@@ -95,7 +95,7 @@ bool ProtoMessageToJson(const google::protobuf::Message& message,
 // See <google/protobuf/util/json_util.h> for details.
 using Pb2ProtoJsonOptions = google::protobuf::util::JsonOptions;
 
-#if GOOGLE_PROTOBUF_VERSION >= 5026001
+#if GOOGLE_PROTOBUF_VERSION >= 5026000
 #define AlwaysPrintPrimitiveFields(options) options.always_print_fields_with_no_presence
 #else
 #define AlwaysPrintPrimitiveFields(options) options.always_print_primitive_fields
